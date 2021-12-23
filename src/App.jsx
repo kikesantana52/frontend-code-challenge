@@ -1,36 +1,92 @@
-import React from 'react';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import "./App.css";
 
-const URL_PATH = "https://gist.githubusercontent.com/bar0191/fae6084225b608f25e98b733864a102b/raw/dea83ea9cf4a8a6022bfc89a8ae8df5ab05b6dcc/pokemon.json";
+const URL_PATH =
+  "https://raw.githubusercontent.com/joseluisq/pokemons/master/pokemons.json";
 
-const App = () => <>
-    <label htmlFor="maxCP" className="max-cp">
+const Pokemon = ({ data }) => {
+  return (
+    <li>
+      <img src={data.sprites.normal} alt="" />
+      <div className="info">
+        <h1>{data.name}</h1>
+        {data.type.map((type, idx) => {
+          return (
+            <span key={idx} className={"type " + type.toLowerCase()}>
+              {type}
+            </span>
+          );
+        })}
+      </div>
+    </li>
+  );
+};
+
+const App = () => {
+  const fetchData = async () => {
+    setLoading(true);
+    const data = await (await fetch(URL_PATH)).json();
+    setLoading(false);
+    setPokemons(data.results);
+  };
+
+  const searchPokemon = async (e) => {
+    const searchText = e.target.value;
+    if (searchText === "") {
+      setFilteredPokemons([]);
+      return;
+    }
+    const filter = "(.*)" + searchText.toUpperCase() + "(.*)";
+    const regexp = new RegExp(filter, "g");
+    const pokemonsToShowByName = pokemons.filter((currentPokemon) =>
+      regexp.test(currentPokemon.name.toUpperCase())
+    );
+    const pokemonsToShowByType = pokemons.filter((currentPokemon) => {
+      let hasAvailableType = false;
+      currentPokemon.type.forEach((type) => {
+        regexp.test(type.toUpperCase()) && (hasAvailableType = true);
+      });
+      return hasAvailableType;
+    });
+
+    const result = [
+      ...new Set([...pokemonsToShowByName, ...pokemonsToShowByType]),
+    ].slice(0, 4);
+    setFilteredPokemons(result);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+  const [pokemons, setPokemons] = useState([]);
+  const [filteredPokemons, setFilteredPokemons] = useState([]);
+  const [isLoading, setLoading] = useState(false);
+  return (
+    <>
+      <label htmlFor="maxCP" className="max-cp">
         <input type="checkbox" id="maxCP" />
-        <small>
-            Maximum Combat Points
-        </small>
-    </label>
-    <input type="text" className="input" placeholder="Pokemon or type" />
-    <div className="loader"></div>
-    <ul className="suggestions">
-        <li>
-            <img src="http://assets.pokemon.com/assets/cms2/img/pokedex/full/025.png" alt="" />
-            <div className="info">
-                <h1>
-                    <span className="hl">Pika</span>chu</h1>
-                <span className="type electric">Electric</span>
-                <span className="type normal">Normal</span>
-            </div>
-        </li>
-        <li>
-            <img src="https://cyndiquil721.files.wordpress.com/2014/02/missingno.png" alt="" />
-            <div className="info">
-                <h1 className="no-results">
-                    No results
-                </h1>
-            </div>
-        </li>
-    </ul>
-</>;
+        <small>Maximum Combat Points</small>
+      </label>
+      <input
+        type="text"
+        className="input"
+        placeholder="Pokemon or type"
+        onChange={searchPokemon}
+      />
+      {isLoading && <div className="loader"></div>}
+      <ul className="suggestions">
+        {filteredPokemons.length > 0 ? (
+          filteredPokemons.map((pokemon, idx) => (
+            <Pokemon key={idx} data={pokemon} />
+          ))
+        ) : (
+          <li>
+            <span>No Results</span>
+          </li>
+        )}
+      </ul>
+    </>
+  );
+};
 
 export default App;
